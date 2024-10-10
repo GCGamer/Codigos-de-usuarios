@@ -1,0 +1,147 @@
+import React, { useState, useEffect } from 'react';
+import { View, FlatList, Text, Button, Modal, TextInput, StyleSheet } from 'react-native';
+
+const UserList = () => {
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  
+  // Array de cores predefinidas
+  const colors = ['#FFA07A', '#20B2AA', '#778899', '#FF6347', '#4682B4'];
+
+  // Fetch users
+  useEffect(() => {
+    fetch('https://6624260004457d4aaf9bbb0c.mockapi.io/Users')
+      .then(response => response.json())
+      .then(data => setUsers(data));
+  }, []);
+
+  // Open modal to edit user
+  const openEditModal = (user) => {
+    setSelectedUser(user);
+    setName(user.name);
+    setEmail(user.email);
+    setIsModalVisible(true);
+  };
+
+  // Close modal
+  const closeModal = () => {
+    setIsModalVisible(false);
+    setSelectedUser(null);
+  };
+
+  // Update user using PUT method
+  const updateUser = (id) => {
+    fetch(`https://6624260004457d4aaf9bbb0c.mockapi.io/Users/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name, email })
+    })
+    .then(response => response.json())
+    .then(updatedUser => {
+      setUsers(users.map(user => user.id === id ? updatedUser : user));
+      closeModal();
+    });
+  };
+
+  // Delete user using DELETE method
+  const deleteUser = (id) => {
+    fetch(`https://6624260004457d4aaf9bbb0c.mockapi.io/Users/${id}`, {
+      method: 'DELETE'
+    })
+    .then(() => {
+      setUsers(users.filter(user => user.id !== id));
+    });
+  };
+
+  // Render user item
+  const renderItem = ({ item, index }) => {
+    // Escolhe uma cor baseado no índice
+    const color = colors[index % colors.length]; // Garante que a cor seja fixa e cíclica
+
+    return (
+      <View style={[styles.userContainer, { borderColor: color }]}>
+        <Text>{item.name}</Text>
+        <Text>{item.email}</Text>
+        <View style={styles.buttonContainer}>
+          <Button
+            title="Editar"
+            color={color} // A cor do botão Editar
+            onPress={() => openEditModal(item)}
+          />
+          <Button
+            title="Excluir"
+            color="#FF4500" // Cor fixa para o botão Excluir
+            onPress={() => deleteUser(item.id)}
+          />
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={users}
+        keyExtractor={item => item.id}
+        renderItem={renderItem}
+      />
+      
+      {/* Modal for editing user */}
+      <Modal visible={isModalVisible} animationType="slide">
+        <View style={styles.modalContainer}>
+          <Text>Editar Usuário</Text>
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder="Nome"
+            style={styles.input}
+          />
+          <TextInput
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Email"
+            style={styles.input}
+          />
+          <Button title="Salvar" onPress={() => updateUser(selectedUser.id)} />
+          <Button title="Cancelar" onPress={closeModal} />
+        </View>
+      </Modal>
+    </View>
+  );
+};
+
+// Estilos para o layout
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 10,
+  },
+  userContainer: {
+    padding: 10,
+    marginVertical: 10,
+    borderWidth: 2,
+    borderRadius: 5,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  modalContainer: {
+    padding: 20,
+  },
+  input: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginBottom: 10,
+    padding: 10,
+  },
+});
+
+export default UserList;
